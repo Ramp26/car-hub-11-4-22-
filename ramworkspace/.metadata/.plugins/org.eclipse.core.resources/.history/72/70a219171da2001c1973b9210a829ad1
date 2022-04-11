@@ -1,0 +1,30 @@
+package com.te.carwalapro;
+
+public class NewCalss {
+	
+	 int a;
+	 String name;
+	 String address;
+	  
+
+	
+	public NewCalss(int a, String name, String address) {
+		super();
+		this.a = a;
+		this.name = name;
+		this.address = address;
+	}
+
+
+
+
+	public static void main(String[] args) {
+		
+		NewCalss calss=new NewCalss(1, "ram", "blh");
+		
+
+		
+	}
+	
+
+}

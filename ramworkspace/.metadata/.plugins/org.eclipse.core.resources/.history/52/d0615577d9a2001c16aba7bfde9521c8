@@ -1,0 +1,89 @@
+package com.te.carwalapro.filter;
+
+import java.io.IOException;
+
+import javax.servlet.FilterChain;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import com.te.carwalapro.jwt.JwtPro;
+import com.te.carwalapro.service.AdminServiceImpl;
+
+@Configuration
+public class JwtRequestFilter extends OncePerRequestFilter {
+
+	@Autowired
+	private AdminServiceImpl adminServiceImpl;
+
+	@Autowired
+	private JwtPro jwtUtil;
+
+	@Override
+	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+			throws ServletException, IOException {
+
+		String authorizationHeader = request.getHeader("Authorization");
+		System.out.println("We are printing it here: " + authorizationHeader);
+
+//		if (request.getServerName().startsWith("/car/admins/")) {
+//			System.out.println(" :) Came here!");
+//			filterChain.doFilter(request, response);
+//		}
+		
+		String jwt = null;
+		String userName = null;
+
+		if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+			jwt = authorizationHeader.substring(7);
+			System.out.println("JWT with double : " + jwt);
+			jwt = jwt.replace("\"", "");
+			userName = jwtUtil.extractUsername(jwt);
+			System.out.println("Corrected JWT : " + jwt);
+			System.out.println("==> This is the username ==> " + userName);
+		}
+
+		if (userName != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+			System.out.println("==> 1!");
+			UserDetails details = this.adminServiceImpl.loadUserByUsername(userName);
+
+			if (jwtUtil.validateToken(jwt, details)) {
+				System.out.println("==> 2!");
+
+				System.out.println(jwtUtil.extractUsername(jwt));
+				UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
+						details.getUsername(), details.getPassword(), details.getAuthorities());
+				authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+				SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+				System.out.println("==> 3!");
+			}
+			System.out.println("==> 4!");
+		}
+
+		response.setHeader("Access-Control-Allow-Origin", "*");
+//		response.setHeader("Access-Control-Allow-Origin", "*");
+		response.setHeader("Access-Control-Allow-Credentials", "true");
+		response.setHeader("Access-Control-Allow-Methods",
+				"ACL, CANCELUPLOAD, CHECKIN, CHECKOUT, COPY, DELETE, GET, HEAD, LOCK, MKCALENDAR, MKCOL, MOVE, OPTIONS, POST, PROPFIND, PROPPATCH, PUT, REPORT, SEARCH, UNCHECKOUT, UNLOCK, UPDATE, VERSION-CONTROL");
+		response.setHeader("Access-Control-Max-Age", "3600");
+		response.setHeader("Access-Control-Allow-Headers",
+				"Origin, X-Requested-With, Content-Type, Accept, Key, Authorization");
+//	    response.setHeader("Access-Control-Allow-Credentials", "true");
+//	    response.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS, DELETE");
+//	    response.setHeader("Access-Control-Max-Age", "3600");
+//	    response.setHeader("Access-Control-Allow-Headers", "Origin, X-Auth-Token, Content-Type, Accept, X-Requested-With, remember-me");
+
+		System.out.println("==> 5!");
+		filterChain.doFilter(request, response);
+
+	}
+
+}
